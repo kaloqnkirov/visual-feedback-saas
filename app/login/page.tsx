@@ -1,15 +1,16 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LogIn, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/context'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const t = useT()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
@@ -18,6 +19,13 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const requested = searchParams.get('mode')
+    if (requested === 'signup' || requested === 'register') {
+      setMode('signup')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -31,7 +39,14 @@ export default function LoginPage() {
           email: email.trim(),
           password,
         })
-        if (signInError) throw signInError
+        if (signInError) {
+          if (signInError.message.toLowerCase().includes('invalid login')) {
+            throw new Error(
+              'Грешен имейл или парола. Ако нямаш акаунт, първо натисни „Създай акаунт“.'
+            )
+          }
+          throw signInError
+        }
         router.replace('/dashboard')
         return
       }
@@ -41,6 +56,10 @@ export default function LoginPage() {
         password,
         options: {
           data: { display_name: displayName.trim() || email.trim() },
+          emailRedirectTo:
+            typeof window !== 'undefined'
+              ? `${window.location.origin}/dashboard`
+              : undefined,
         },
       })
       if (signUpError) throw signUpError
@@ -123,17 +142,31 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode((current) => (current === 'login' ? 'signup' : 'login'))
-            setError('')
-            setInfo('')
-          }}
-          className="mt-4 w-full text-center text-sm text-sky-400 hover:text-sky-300"
-        >
-          {mode === 'login' ? t('needAccount') : t('haveAccount')}
-        </button>
+        {mode === 'login' ? (
+          <Link
+            href="/login?mode=signup"
+            className="mt-4 block w-full text-center text-sm text-sky-400 hover:text-sky-300"
+            onClick={() => {
+              setMode('signup')
+              setError('')
+              setInfo('')
+            }}
+          >
+            {t('needAccount')}
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="mt-4 block w-full text-center text-sm text-sky-400 hover:text-sky-300"
+            onClick={() => {
+              setMode('login')
+              setError('')
+              setInfo('')
+            }}
+          >
+            {t('haveAccount')}
+          </Link>
+        )}
 
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
           <Link href="/guide" className="text-sky-400 hover:text-sky-300">
@@ -148,5 +181,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-400">
+          Loading…
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
