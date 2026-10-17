@@ -8,6 +8,7 @@ import {
   BookOpen,
   Check,
   Copy,
+  CreditCard,
   ExternalLink,
   FolderOpen as FolderCanvas,
   LogOut,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useSubscription } from '@/hooks/useSubscription'
 import type { AppNotification, Project, ShareMode } from '@/lib/types'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useI18n, useT } from '@/lib/i18n/context'
@@ -25,6 +27,8 @@ export default function DashboardPage() {
   const t = useT()
   const { dir, locale } = useI18n()
   const { user, loading: authLoading, signOut } = useAuth()
+  const { loading: billingLoading, hasAccess, billingEnabled } =
+    useSubscription()
 
   const [projects, setProjects] = useState<Project[]>([])
   const [notifications, setNotifications] = useState<AppNotification[]>([])
@@ -46,6 +50,12 @@ export default function DashboardPage() {
       router.replace('/login')
     }
   }, [authLoading, user, router])
+
+  useEffect(() => {
+    if (!authLoading && !billingLoading && user && billingEnabled && !hasAccess) {
+      router.replace('/billing')
+    }
+  }, [authLoading, billingLoading, user, billingEnabled, hasAccess, router])
 
   const fetchProjects = useCallback(async () => {
     if (!user) return
@@ -287,6 +297,13 @@ export default function DashboardPage() {
             <p className="hidden text-sm text-slate-400 sm:block">
               {user.email}
             </p>
+            <Link
+              href="/billing"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+            >
+              <CreditCard className="h-4 w-4" />
+              Абонамент
+            </Link>
             <Link
               href="/guide"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
