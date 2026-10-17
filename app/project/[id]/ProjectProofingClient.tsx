@@ -121,7 +121,7 @@ export default function ProjectProofingPage({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assetFailed, setAssetFailed] = useState(false)
-  const [assetLoading, setAssetLoading] = useState(true)
+  const [, setAssetLoading] = useState(true)
 
   const [draft, setDraft] = useState<DraftPin | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -325,7 +325,7 @@ export default function ProjectProofingPage({
       setDraft(nextDraft)
       setDetailExpanded(true)
     },
-    [paintLiveOverlay, pointerToPercent]
+    [paintLiveOverlay, pointerToPercent, setDetailExpanded]
   )
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {

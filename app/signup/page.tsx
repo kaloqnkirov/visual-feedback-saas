@@ -1,13 +1,14 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/context'
 
 export default function SignUpPage() {
+  const router = useRouter()
   const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,7 +35,7 @@ export default function SignUpPage() {
       if (signUpError) throw signUpError
 
       if (data.session) {
-        window.location.assign('/dashboard')
+        router.replace('/dashboard')
         return
       }
 
@@ -100,12 +101,12 @@ export default function SignUpPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-slate-400">
-          {t('haveAccount')}{' '}
-          <a href="/login" className="text-sky-400 hover:text-sky-300">
-            {t('signIn')}
-          </a>
-        </p>
+        <a
+          href="/login"
+          className="mt-4 block w-full text-center text-sm text-sky-400 hover:text-sky-300"
+        >
+          {t('haveAccount')}
+        </a>
 
         <div className="mt-3 text-center text-xs">
           <a href="/guide" className="text-sky-400 hover:text-sky-300">

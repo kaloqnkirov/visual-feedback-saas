@@ -1,12 +1,14 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { LogIn } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/context'
 
 export default function LoginPage() {
+  const router = useRouter()
   const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,7 +33,7 @@ export default function LoginPage() {
         }
         throw signInError
       }
-      window.location.assign('/dashboard')
+      router.replace('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : t('authFailed'))
     } finally {
