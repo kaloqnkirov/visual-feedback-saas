@@ -55,6 +55,7 @@ export default function DashboardPage() {
     const { data, error: fetchError } = await supabase
       .from('projects')
       .select('*')
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
 
     if (fetchError) {

@@ -150,18 +150,11 @@ export default function ProjectProofingPage({
     setLoading(true)
     setError(null)
 
+    // RPCs: share links work, but freelancers cannot list each other's projects
     const [projectRes, pinsRes, versionsRes] = await Promise.all([
-      supabase.from('projects').select('*').eq('id', projectId).single(),
-      supabase
-        .from('pins')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('project_versions')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true }),
+      supabase.rpc('get_shared_project', { p_id: projectId }),
+      supabase.rpc('get_shared_pins', { p_project_id: projectId }),
+      supabase.rpc('get_shared_versions', { p_project_id: projectId }),
     ])
 
     if (projectRes.error) {
@@ -177,7 +170,15 @@ export default function ProjectProofingPage({
       return
     }
 
-    const nextProject = projectRes.data as Project
+    const projectRows = (projectRes.data as Project[]) ?? []
+    const nextProject = projectRows[0]
+    if (!nextProject) {
+      setError('Project not found')
+      setProject(null)
+      setLoading(false)
+      return
+    }
+
     const nextPins = (pinsRes.data as Pin[]) ?? []
     setProject(nextProject)
     setPins(nextPins)
@@ -187,14 +188,9 @@ export default function ProjectProofingPage({
     setAssetLoading(true)
 
     if (nextPins.length) {
-      const { data: replyData } = await supabase
-        .from('pin_replies')
-        .select('*')
-        .in(
-          'pin_id',
-          nextPins.map((pin) => pin.id)
-        )
-        .order('created_at', { ascending: true })
+      const { data: replyData } = await supabase.rpc('get_shared_replies', {
+        p_pin_ids: nextPins.map((pin) => pin.id),
+      })
       setReplies((replyData as PinReply[]) ?? [])
     } else {
       setReplies([])
