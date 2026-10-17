@@ -12,7 +12,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useT()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup'>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -22,10 +22,19 @@ function LoginForm() {
 
   useEffect(() => {
     const requested = searchParams.get('mode')
-    if (requested === 'signup' || requested === 'register') {
+    if (requested === 'login' || requested === 'signin') {
+      setMode('login')
+    } else if (requested === 'signup' || requested === 'register') {
       setMode('signup')
     }
   }, [searchParams])
+
+  const switchMode = (next: 'login' | 'signup') => {
+    setMode(next)
+    setError('')
+    setInfo('')
+    router.replace(next === 'signup' ? '/login?mode=signup' : '/login?mode=login')
+  }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -41,8 +50,10 @@ function LoginForm() {
         })
         if (signInError) {
           if (signInError.message.toLowerCase().includes('invalid login')) {
+            setMode('signup')
+            router.replace('/login?mode=signup')
             throw new Error(
-              'Грешен имейл или парола. Ако нямаш акаунт, първо натисни „Създай акаунт“.'
+              'Няма такъв акаунт. Попълни същото и натисни синия бутон „Създай акаунт“.'
             )
           }
           throw signInError
@@ -71,6 +82,7 @@ function LoginForm() {
 
       setInfo(t('checkEmail'))
       setMode('login')
+      router.replace('/login?mode=login')
     } catch (err) {
       setError(err instanceof Error ? err.message : t('authFailed'))
     } finally {
@@ -92,6 +104,31 @@ function LoginForm() {
           {mode === 'login' ? t('signIn') : t('signUp')}
         </h1>
         <p className="mt-2 text-sm text-slate-400">{t('authSubtitle')}</p>
+
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1">
+          <button
+            type="button"
+            onClick={() => switchMode('signup')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              mode === 'signup'
+                ? 'bg-sky-500 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {t('signUp')}
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              mode === 'login'
+                ? 'bg-sky-500 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {t('signIn')}
+          </button>
+        </div>
 
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
         {info && <p className="mt-4 text-sm text-emerald-400">{info}</p>}
@@ -127,7 +164,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-400 disabled:opacity-60"
           >
             {mode === 'login' ? (
               <LogIn className="h-4 w-4" />
@@ -142,31 +179,11 @@ function LoginForm() {
           </button>
         </form>
 
-        {mode === 'login' ? (
-          <Link
-            href="/login?mode=signup"
-            className="mt-4 block w-full text-center text-sm text-sky-400 hover:text-sky-300"
-            onClick={() => {
-              setMode('signup')
-              setError('')
-              setInfo('')
-            }}
-          >
-            {t('needAccount')}
-          </Link>
-        ) : (
-          <Link
-            href="/login"
-            className="mt-4 block w-full text-center text-sm text-sky-400 hover:text-sky-300"
-            onClick={() => {
-              setMode('login')
-              setError('')
-              setInfo('')
-            }}
-          >
-            {t('haveAccount')}
-          </Link>
-        )}
+        <p className="mt-4 text-center text-xs text-slate-500">
+          {mode === 'signup'
+            ? 'Първи път тук? Избери „Създай акаунт“, после същите данни за вход.'
+            : 'Ако нямаш акаунт, избери таба „Създай акаунт“ горе.'}
+        </p>
 
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
           <Link href="/guide" className="text-sky-400 hover:text-sky-300">
