@@ -35,7 +35,7 @@ export default function SignUpPage() {
       if (signUpError) throw signUpError
 
       if (data.session) {
-        router.replace('/dashboard')
+        router.replace('/billing')
         return
       }
 

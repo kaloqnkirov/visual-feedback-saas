@@ -33,6 +33,7 @@ export default function LoginPage() {
         }
         throw signInError
       }
+      // Billing gate decides dashboard vs /billing
       router.replace('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : t('authFailed'))

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { hasPaidAccess, isBillingEnabled } from '@/lib/stripe-access'
+import { hasPaidAccess } from '@/lib/stripe-access'
 import { useAuth } from '@/hooks/useAuth'
 
 type Profile = {
@@ -13,27 +13,33 @@ type Profile = {
 export function useSubscription() {
   const { user, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [billingEnabled, setBillingEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
-  const billingEnabled = isBillingEnabled()
 
   useEffect(() => {
     let mounted = true
 
     async function load() {
       if (authLoading) return
+
+      const statusRes = await fetch('/api/billing/status', { cache: 'no-store' })
+      const statusJson = (await statusRes.json().catch(() => ({}))) as {
+        enabled?: boolean
+      }
+      const enabled = Boolean(statusJson.enabled)
+
+      if (!mounted) return
+      setBillingEnabled(enabled)
+
       if (!user) {
-        if (mounted) {
-          setProfile(null)
-          setLoading(false)
-        }
+        setProfile(null)
+        setLoading(false)
         return
       }
 
-      if (!billingEnabled) {
-        if (mounted) {
-          setProfile({ subscription_status: 'active', stripe_customer_id: null })
-          setLoading(false)
-        }
+      if (!enabled) {
+        setProfile({ subscription_status: 'active', stripe_customer_id: null })
+        setLoading(false)
         return
       }
 
@@ -44,7 +50,12 @@ export function useSubscription() {
         .maybeSingle()
 
       if (!mounted) return
-      setProfile((data as Profile) || { subscription_status: 'inactive', stripe_customer_id: null })
+      setProfile(
+        (data as Profile) || {
+          subscription_status: 'inactive',
+          stripe_customer_id: null,
+        }
+      )
       setLoading(false)
     }
 
@@ -52,7 +63,7 @@ export function useSubscription() {
     return () => {
       mounted = false
     }
-  }, [user, authLoading, billingEnabled])
+  }, [user, authLoading])
 
   return {
     loading: authLoading || loading,
