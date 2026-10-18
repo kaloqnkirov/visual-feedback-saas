@@ -2,18 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { hasPaidAccess } from '@/lib/stripe-access'
 import { useAuth } from '@/hooks/useAuth'
-
-type Profile = {
-  subscription_status: string | null
-  stripe_customer_id: string | null
-}
 
 export function useSubscription() {
   const { user, loading: authLoading } = useAuth()
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [billingEnabled, setBillingEnabled] = useState(false)
+  const [hasAccess, setHasAccess] = useState(true)
+  const [status, setStatus] = useState('inactive')
+  const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,40 +18,29 @@ export function useSubscription() {
     async function load() {
       if (authLoading) return
 
-      const statusRes = await fetch('/api/billing/status', { cache: 'no-store' })
-      const statusJson = (await statusRes.json().catch(() => ({}))) as {
+      const headers: HeadersInit = {}
+      if (user) {
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (token) headers.Authorization = `Bearer ${token}`
+      }
+
+      const statusRes = await fetch('/api/billing/status', {
+        cache: 'no-store',
+        headers,
+      })
+      const json = (await statusRes.json().catch(() => ({}))) as {
         enabled?: boolean
+        hasAccess?: boolean
+        status?: string
+        isAdmin?: boolean
       }
-      const enabled = Boolean(statusJson.enabled)
 
       if (!mounted) return
-      setBillingEnabled(enabled)
-
-      if (!user) {
-        setProfile(null)
-        setLoading(false)
-        return
-      }
-
-      if (!enabled) {
-        setProfile({ subscription_status: 'active', stripe_customer_id: null })
-        setLoading(false)
-        return
-      }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('subscription_status, stripe_customer_id')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (!mounted) return
-      setProfile(
-        (data as Profile) || {
-          subscription_status: 'inactive',
-          stripe_customer_id: null,
-        }
-      )
+      setBillingEnabled(Boolean(json.enabled))
+      setHasAccess(json.hasAccess !== false)
+      setStatus(json.status || 'inactive')
+      setIsAdmin(Boolean(json.isAdmin))
       setLoading(false)
     }
 
@@ -68,9 +53,10 @@ export function useSubscription() {
   return {
     loading: authLoading || loading,
     billingEnabled,
-    status: profile?.subscription_status || 'inactive',
-    hasAccess: !billingEnabled || hasPaidAccess(profile?.subscription_status),
-    customerId: profile?.stripe_customer_id || null,
+    status,
+    hasAccess,
+    isAdmin,
+    customerId: null as string | null,
   }
 }
 
